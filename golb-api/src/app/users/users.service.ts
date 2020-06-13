@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { validate } from 'class-validator';
 import { User } from './user.entity';
 import { CreateUserDto, UserDto, UpdateUserDto } from './dto';
 
@@ -15,7 +14,7 @@ export class UsersService {
     async getById(id: number): Promise<UserDto> {
         const user = await this.usersRepository.findOne(id);
 
-        if (!user)
+        if (!user || user.isDeleted)
             return;
 
         const userDto = new UserDto();
@@ -40,7 +39,8 @@ export class UsersService {
     async getAll(take: number = 200, skip: number = 0): Promise<UserDto[]> {
         const users = await this.usersRepository.find({
             take: take,
-            skip: skip
+            skip: skip,
+            where: { isDeleted: false }
         });
 
         return users.map(u => {
@@ -59,23 +59,13 @@ export class UsersService {
     }
 
     async create(dto: CreateUserDto): Promise<UserDto> {
-        const errors = await validate(dto);
-
-        if (errors.length > 0)
-            throw errors[0];
-
         const user = this.usersRepository.create(dto);
         return this.usersRepository.save(user);
     }
 
     async update(updateUserDto: UpdateUserDto): Promise<UserDto> {
-        const errors = await validate(updateUserDto);
-
-        if (errors.length > 0)
-            throw errors[0];
-
         const user = await this.usersRepository.findOne(updateUserDto.id);
-        if (!user)
+        if (!user || user.isDeleted)
             return;
 
         user.firstName = updateUserDto.firstName;
@@ -85,8 +75,13 @@ export class UsersService {
         return this.usersRepository.save(user);
     }
 
-    async delete(id: number): Promise<number> {
-        const deleteResult = await this.usersRepository.softDelete(id);
-        return deleteResult.affected;
+    async delete(id: number) {
+        const user = await this.usersRepository.findOne(id);
+        if (!user || user.isDeleted)
+            return;
+
+        user.isDeleted = true;
+
+        this.usersRepository.save(user);
     }
 }
