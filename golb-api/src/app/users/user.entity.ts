@@ -1,6 +1,8 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany, CreateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany, CreateDateColumn, Unique } from 'typeorm';
 
 @Entity({ name: 'users' })
+@Unique('unique_username', ['username'])
+@Unique('unique_email', ['email'])
 export class User {
     @PrimaryGeneratedColumn()
     id: number;
@@ -26,10 +28,10 @@ export class User {
     @CreateDateColumn({ name: 'creation_date' })
     creationDate: Date;
 
-    @Column({ name: 'last_login', nullable: true  })
+    @Column({ name: 'last_login', nullable: true })
     lastLogin: Date;
 
-    @Column({ name: 'last_logout' , nullable: true })
+    @Column({ name: 'last_logout', nullable: true })
     lastLogout: Date;
 
     @Column({ name: 'is_deleted', default: false })
