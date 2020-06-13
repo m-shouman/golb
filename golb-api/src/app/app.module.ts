@@ -1,25 +1,33 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { UsersModule } from './users/users.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config'
+import { UsersModule } from './users/users.module';
+import appConfig from '../config/app.config'
+import Environments from '../config/environments'
+import ConfigKeys from '../config/configKeys'
+import databaseConfig from '../config/database.config'
+import * as path from 'path';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [appConfig, databaseConfig],
+    }),
     TypeOrmModule.forRootAsync({
-      useFactory: () => ({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
         type: 'postgres',
-        host: 'localhost',
-        port: 5432,
-        username: 'postgres',
-        password: 'postgres',
-        database: 'golb_dev',
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true,
+        host: configService.get<string>(ConfigKeys.databaseHost),
+        port: configService.get<number>(ConfigKeys.databasePort),
+        username: configService.get<string>(ConfigKeys.databaseUsername),
+        password: configService.get<string>(ConfigKeys.databasePassword),
+        database: configService.get<string>(ConfigKeys.databaseName),
+        entities: [path.join(__dirname, '/**/*.entity{.ts,.js}')],
+        synchronize: process.env.NODE_ENV === Environments.Development,
       })
     }),
     UsersModule],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule { }
